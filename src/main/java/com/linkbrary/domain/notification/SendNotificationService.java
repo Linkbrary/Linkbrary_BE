@@ -119,6 +119,7 @@ public class SendNotificationService {
         List<UserLinkReminder> userLinkReminders = userLinkReminderRepository.findAllByReminderDaysAndReminderTimeBetween(currentDay.toString(), startRange, endRange);
         for (UserLinkReminder reminder : userLinkReminders) {
             Member user = reminder.getMember();
+            System.out.println(user.getToken());
             Long id = reminder.getUserLink().getUserDirectory().getId();
             String title = user.getNickname() + "님이 설정하신 시간입니다!";
             String body = "“" + reminder.getUserLink().getTitle() + "” 링크를 확인하세요!";

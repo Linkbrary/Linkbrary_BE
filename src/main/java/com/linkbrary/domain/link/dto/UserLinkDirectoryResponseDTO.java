@@ -12,6 +12,7 @@ public class UserLinkDirectoryResponseDTO {
     private Long id;
     private String title;
     private String thumbnail;
+    private String url;
     private String summary;
     private LocalDateTime createdAt;
     private LocalDateTime modifiedAt;
@@ -19,6 +20,7 @@ public class UserLinkDirectoryResponseDTO {
     public static UserLinkDirectoryResponseDTO from(UserLink userLink) {
         return UserLinkDirectoryResponseDTO.builder()
                 .id(userLink.getId())
+                .url(userLink.getLink().getUrl())
                 .title(userLink.getLink().getTitle())
                 .createdAt(userLink.getCreatedAt())
                 .summary(userLink.getLink().getSummary())

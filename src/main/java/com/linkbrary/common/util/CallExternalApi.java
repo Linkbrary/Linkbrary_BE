@@ -17,18 +17,20 @@ import org.apache.hc.core5.http.io.entity.EntityUtils;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
+@Service
 public class CallExternalApi {
     private static final String EXTERNAL_API_URL = "http://3.37.89.171:8000";
     private static final Logger logger = LoggerFactory.getLogger(LinkService.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static final String PUSH_NOTIFICATION_URL = "https://exp.host/--/api/v2/push/send";
-
-
+    private static final String PUSH_NOTIFICATION_URL = "https://exp.host/--/api/v2/push/send?useFcmV1=true";
     public static String callExternalGetApi(String url, int mode) {
         switch (mode) {
             case 1:
@@ -58,11 +60,12 @@ public class CallExternalApi {
         }
     }
 
+    @Retryable(value = ClientProtocolException.class, maxAttempts = 3 , backoff = @Backoff(delay = 1000))
     public static DirectoryInfo handleDirectoryRecommendationPostRequest(String content, String directory, String endpoint) {
         try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
             content = escapeSpecialCharacters(content);
             directory = escapeSpecialCharacters(directory);
-            System.out.println(directory);
+            System.out.println(content);
             String requestUrl = EXTERNAL_API_URL + endpoint;
             HttpPost postRequest = new HttpPost(requestUrl);
             postRequest.addHeader("Accept", "application/json");
@@ -121,6 +124,9 @@ public class CallExternalApi {
         try {
             JsonNode rootNode = objectMapper.readTree(jsonResponse);
             String directory = rootNode.path("directory").asText();
+            if (directory.contains("디렉토리의 이름")){
+                throw new RuntimeException();
+            }
             String idStr = rootNode.path("id").asText();
             directory = directory.replaceAll("^<|>$", "");
             idStr = idStr.replaceAll("^<|>$", "");
@@ -191,16 +197,14 @@ public class CallExternalApi {
             HttpPost postRequest = new HttpPost(PUSH_NOTIFICATION_URL);
             postRequest.addHeader("Accept", "application/json");
             postRequest.addHeader("Content-Type", "application/json");
-            postRequest.addHeader("Authorization", "key=" + "<3e5e45b21609ff80a73fee7ffc6616ec72d1e45b>");
-
+            //postRequest.addHeader("Authorization", "Bearer ya29.c.c0AY_VpZivWrjiQa1rOCDROhWlc0R_48UWAseC1XsZuHt1K-YdHJIZYeaGOw-QotAuxfPDP1xlmCljcnkyxUDla_2ye0_-84iHB7aiqz5bPv-bN5UiqhRieMuOPyTcrduhHCwNFts0x-8tz5cZp9sjiCz7AnH9TCTj4DqfF-GFy-2RTbrXOi6D9mOlvCvKSnxoFlgUXcL2ts4M6jyhLKNXSFF1SH9kMf6ZJwqccma5PD42CwURUZq2-1CpImW96fcgz67DU3DESNN5L5KrCuLFtVBKXHCqkX0wcTRfIa8U1RqfwaPPVZCPMDjboQjrF8ysE6WIuo4mvDTCv4_UItUC9rbxZGcchRA7wneyGKmTVsJnBhphXOvIn-szH385AlpqM9blmXn7bnMn59Ydji74dbxXBqx_r5XSpn1t4xc1yWUBQRpBe4Xhd9xZ4bQFdjxrwbwkwi57r6OutU6hJzbi69oYO7MZsv7SYMsz7OZS5I5nFmn2Q96u8MuU7kQ5vnoprtntpBbI0kjQR_gxaSdue0aMY-l82Xvb5BQ_4XczeSz6j_3BVygqfUswRkRl_-fktOWRtJY4WxoyrolnqZ0Fktq26WkZ2Ze5a59MkI6th5wwq9-xBBhvkBnZpSWcwdof0MsshpdVYUMVY8UucSI02WuFFUYjS-yFaUhs8_91gktWl-VlV2d_2vBj4341MW_mUI2jvO4ymF42IxVbgFzqR8zmcfO7az-BumQRiFvlBqV6dX6enesmjQZ6JhJ2fszBislfqbswtYumVFrYlcor9Jb_jgylaJB0Mvw8ZUi7QlvYby_r31sdJOWZXSclpQFk_bjjYJhRJSgbIFIfUy18Os75oxsrxn7YpyYFexvl6Uwbix-BgRU5blV7zhJXs1Rnt4sv909tVQ92_FW5ggJyf1y2l9dcnqfUpxnaQ4gyJIejaBmSkZjXhh9k64SvmnIyii2jf9Wq5tvtnRn2_gYlaUu5xrztbZn4wp1qXaiYwk72amMYhSm3fef");
+            System.out.println(token);
             String jsonPayload = String.format(
                     "{\"to\":\"%s\",\"sound\":\"default\",\"title\":\"%s\",\"body\":\"%s\",\"data\":{\"directory\":\"%s\"}}",
                     token, title, body, data
             );
-
             StringEntity entity = new StringEntity(jsonPayload, StandardCharsets.UTF_8);
             postRequest.setEntity(entity);
-
             HttpClientResponseHandler<String> responseHandler = createResponseHandler();
             String responseBody = httpClient.execute(postRequest, responseHandler);
             System.out.println("Response: " + responseBody);

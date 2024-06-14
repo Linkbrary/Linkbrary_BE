@@ -104,6 +104,16 @@ public class LinkService {
         userLinkRepository.save(userLink);
     }
 
+    public UserLinkResponseDTO updateLinkLocation(UpdateLinkLocationDTO updateLinkLocationDTO) {
+        UserLink userLink = userLinkRepository.findById(updateLinkLocationDTO.getLinkId())
+                .orElseThrow(() -> new UserLinkHandler(ErrorCode.LINK_NOT_FOUND));
+        UserDirectory userDirectory = userDirectoryRepository.findById(updateLinkLocationDTO.getMovingDirectoryId())
+                .orElseThrow(() -> new UserDirectoryHandler(ErrorCode.DIRECTORY_NOT_FOUND));
+        userLink.updateUserDirectory(userDirectory);
+        userLinkRepository.save(userLink);
+        return UserLinkResponseDTO.from(userLink);
+    }
+
     public static Link mapJsonToLink(String jsonString, String url) {
         ObjectMapper objectMapper = new ObjectMapper();
         try {
@@ -196,7 +206,7 @@ public class LinkService {
     public String getDirectory() {
         String userDirectories = userDirectoryService.getAllDirectoryNames();
         // Replace newline characters with escaped newline characters
-        Link link = linkRepository.findById(6L).orElseThrow(() -> new UserLinkHandler(ErrorCode.LINK_NOT_FOUND));
+        Link link = linkRepository.findById(12L).orElseThrow(() -> new UserLinkHandler(ErrorCode.LINK_NOT_FOUND));
         DirectoryInfo directoryInfo = handleDirectoryRecommendationPostRequest(link.getContent(), userDirectories, "/directory");
         return directoryInfo.getName() + directoryInfo.getId().toString();
     }
@@ -240,19 +250,21 @@ public class LinkService {
         List<UserLink> userLinks;
         switch (mode) {
             case 1:
-                List<UserLink> titleLinks = userLinkRepository.findAllByMemberAndTitleContainingAndCreatedAtBetween(member, keyword, startDateTime, endDateTime);
-                List<UserLink> contentLinks = userLinkRepository.searchByContentForMember(member.getId(), keyword, startDateTime, endDateTime);
+                List<UserLink> titleLinks = userLinkRepository.findTop3ByMemberAndTitleContainingAndCreatedAtBetween(member, keyword, startDateTime, endDateTime);
+                List<UserLink> contentLinks = userLinkRepository.findTop3ByMemberAndLink_ContentContainingAndCreatedAtBetween(member
+                        , keyword, startDateTime, endDateTime);
                 // 두 리스트 병합, 중복 제거
                 userLinks = Stream.concat(titleLinks.stream(), contentLinks.stream())
                         .distinct()
+                        .limit(3)
                         .collect(Collectors.toList());
             case 2:
                 // 메모 검색
-                userLinks = userLinkRepository.findAllByMemberAndMemoContainingAndCreatedAtBetween(member, keyword, startDateTime, endDateTime);
+                userLinks = userLinkRepository.findTop3ByMemberAndMemoContainingAndCreatedAtBetween(member, keyword, startDateTime, endDateTime);
                 break;
             case 3:
                 // summary 검색
-                userLinks = userLinkRepository.findAllByMemberAndLink_SummaryContainingAndCreatedAtBetween(member, keyword, startDateTime, endDateTime);
+                userLinks = userLinkRepository.findTop3ByMemberAndLink_SummaryContainingAndCreatedAtBetween(member, keyword, startDateTime, endDateTime);
                 break;
 
             case 4:
@@ -286,7 +298,12 @@ public class LinkService {
     public List<SearchLinkResponseDTO> searchByLink(String url) {
         String embeddingString = callExternalGetApi(url, 2);
         float[] embedding = parseEmbedding(embeddingString, "embed");
+        long startTime = System.nanoTime();
         List<UserLink> links = userLinkRepository.findNearestNeighborsByEmbedding(Arrays.toString(embedding));
+        long endTime = System.nanoTime(); // 끝 시간 측정
+        long duration = endTime - startTime; // 실행 시간 계산
+        System.out.println("Execution time in nanoseconds: " + duration);
+        System.out.println("Execution time in milliseconds: " + duration / 1_000_000);
         return links.stream().map(SearchLinkResponseDTO::from).collect(Collectors.toList());
     }
 

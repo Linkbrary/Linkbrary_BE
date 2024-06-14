@@ -30,7 +30,8 @@ public class HomeService {
 
     public ApiResponse<HomeResponseDTO> getHomeData() {
         Member member = userService.getMemberFromToken();
-        List<UserLink> userLinks = userLinkRepository.findTop3ByMemberOrderByCreatedAtDesc(member);
+        List<UserLink> recommendUserLinks = userLinkRepository.findTop3ByMemberOrderByCreatedAtDesc(member);
+        List<UserLink> userLinks = userLinkRepository.findAllByMember(member);
         int totalLinks = userLinks.size();
         int readLinks = (int) userLinks.stream().filter(UserLink::isRead).count();
 
@@ -42,7 +43,7 @@ public class HomeService {
                         .build())
                 .collect(Collectors.toList());
 
-        List<RecommendedLinkDTO> recommendedLinkDTOS = userLinks.stream()
+        List<RecommendedLinkDTO> recommendedLinkDTOS = recommendUserLinks.stream()
                 .map(RecommendedLinkDTO::from)
                 .toList();
 

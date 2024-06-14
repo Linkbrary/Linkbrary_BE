@@ -3,6 +3,7 @@ package com.linkbrary.domain.link.controller;
 import com.linkbrary.common.response.ApiResponse;
 import com.linkbrary.domain.link.dto.CreateUserLinkRequestDTO;
 import com.linkbrary.domain.link.dto.CreateLinkRequestDTO;
+import com.linkbrary.domain.link.dto.UpdateLinkLocationDTO;
 import com.linkbrary.domain.link.dto.UpdateUserLinkRequestDTO;
 import com.linkbrary.domain.link.service.LinkService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,9 +21,10 @@ public class LinkController {
 
     @Operation(summary = "유저 링크 저장")
     @PostMapping("/users")
-    public ApiResponse createUserLink(@Valid  @RequestBody CreateUserLinkRequestDTO createUserLinkRequestDTO) {
+    public ApiResponse createUserLink(@Valid @RequestBody CreateUserLinkRequestDTO createUserLinkRequestDTO) {
         return linkService.createUserLink(createUserLinkRequestDTO);
     }
+
     @Operation(summary = "유저 링크 삭제")
     @DeleteMapping("/users/{id}")
     private ApiResponse deleteUserLink(@PathVariable Long id) {
@@ -41,7 +43,6 @@ public class LinkController {
         return linkService.createLink(createLinkRequestDTO);
     }
 
-
     @Operation(summary = "단일 링크(크롤링+ gpt 처리) 조회용 api user 사용 x for admin")
     @GetMapping
     public ApiResponse getLink(@Parameter(description = "단일 링크(user링크 아님) ID") @RequestParam Long linkId) {
@@ -53,6 +54,12 @@ public class LinkController {
     public ApiResponse updateLinkReadStatus(@Parameter(description = "읽음 여부 업데이트할 id") @PathVariable Long id) {
         linkService.updateLinkReadStatus(id);
         return ApiResponse.onSuccess("Link read status updated successfully");
+    }
+
+    @Operation(summary = "링크 디렉토리 위치 업데이트 API")
+    @PutMapping("/update-location")
+    public ApiResponse updateLinkLocation(@RequestBody UpdateLinkLocationDTO updateLinkLocationDTO) {
+        return ApiResponse.onSuccess(linkService.updateLinkLocation(updateLinkLocationDTO));
     }
 
 
